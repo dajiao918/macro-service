@@ -1,0 +1,24 @@
+server:
+  port: 8001
+
+spring:
+  application:
+    name: payment
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/book2?characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      username: root
+      password: qwer
+      driver-class-name: com.mysql.cj.jdbc.Driver
+eureka:
+  instance:
+    instance-id: payment8001
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 1
+    lease-expiration-duration-in-seconds: 2
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka
+      #,http://eureka7002.com:7002/eureka
