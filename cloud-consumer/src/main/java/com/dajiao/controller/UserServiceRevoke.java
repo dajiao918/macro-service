@@ -26,5 +26,4 @@ public class UserServiceRevoke {
     public RespBean revoke(@PathVariable("id") Integer id) {
         return restTemplate.getForObject(url+"/user/"+id, RespBean.class);
     }
-
 }

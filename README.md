@@ -305,3 +305,166 @@ eureka:
     eviction-interval-timer-in-ms: 10000 # 这是在相应时间内没有心跳连接后eureka服务端的等待时间，在10s后，这些客户端就会被剔除
 ```
 
+
+
+## 服务调用负载均衡Ribbon
+
+
+
+### 1. maven依赖
+
+当加入了eureka之后，自动依赖了ribbon
+
+
+
+### 2. 如何使用
+
+在客户服务中获取RestTemplate实例，在RestTemplate实例获取时加上@LoadBalanced注解，即使用了Ribbon的负载均衡
+
+``` java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-02 21:15
+ **/
+@Configuration
+public class RestConfig {
+
+    @Bean
+    @LoadBalanced
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+
+
+
+在调用服务时，可以使用RestTemplate的`getForObject(url,RespBean.class)`或者是`postForObject(url,Object参数,RespBean.class)`调用；
+
+```java
+@RestController
+public class UserServiceRevoke {
+
+    @Autowired
+    RestTemplate restTemplate;
+
+    // url就是http+服务名+具体的接口路径
+    public static final String url = "http://PAYMENT";
+
+    @GetMapping("/user/{id}")
+    public RespBean revoke(@PathVariable("id") Integer id) {
+        return restTemplate.getForObject(url+"/user/"+id, RespBean.class);
+    }
+}
+```
+
+
+
+### 3. Ribbon的负载均衡策略
+
+<img src="img/ribbon-rule.png">
+
+ribbon的默认策略是轮询
+
+```java
+public class RoundRobinRule extends AbstractLoadBalancerRule {
+    private AtomicInteger nextServerCyclicCounter;
+    private static final boolean AVAILABLE_ONLY_SERVERS = true;
+    private static final boolean ALL_SERVERS = false;
+    private static Logger log = LoggerFactory.getLogger(RoundRobinRule.class);
+
+    public RoundRobinRule() {
+        this.nextServerCyclicCounter = new AtomicInteger(0);
+    }
+
+    public RoundRobinRule(ILoadBalancer lb) {
+        this();
+        this.setLoadBalancer(lb);
+    }
+
+    public Server choose(ILoadBalancer lb, Object key) {
+        if (lb == null) {
+            log.warn("no load balancer");
+            return null;
+        } else {
+            Server server = null;
+            int count = 0;
+
+            while(true) {
+                if (server == null && count++ < 10) {
+                    // 获取可达的服务list
+                    List<Server> reachableServers = lb.getReachableServers();
+                    // 获取所有服务
+                    List<Server> allServers = lb.getAllServers();
+                    int upCount = reachableServers.size();
+                    int serverCount = allServers.size();
+                    // 如果可达的服务和所有的服务均不为0，进入轮询
+                    if (upCount != 0 && serverCount != 0) {
+                        // 自旋轮询
+                        int nextServerIndex = this.incrementAndGetModulo(serverCount);
+                        // 获取服务
+                        server = (Server)allServers.get(nextServerIndex);
+                        // 猜想该服务可能被别的线程删除，因为穿进去的参数serverCount是自旋之前的
+                        if (server == null) {
+                            Thread.yield();
+                        } else {
+                            // 服务可用，且准备好，返回服务
+                            if (server.isAlive() && server.isReadyToServe()) {
+                                return server;
+                            }
+
+                            server = null;
+                        }
+                        continue;
+                    }
+
+                    log.warn("No up servers available from load balancer: " + lb);
+                    return null;
+                }
+
+                if (count >= 10) {
+                    log.warn("No available alive servers after 10 tries from load balancer: " + lb);
+                }
+
+                return server;
+            }
+        }
+    }
+
+    private int incrementAndGetModulo(int modulo) {
+        int current;
+        int next;
+        do {
+            // 获取当前的请求次数
+            current = this.nextServerCyclicCounter.get();
+            // 取余求得返回的服务下标
+            next = (current + 1) % modulo;
+            // 如果cas成功，代表当前线程是第一个获取到next服务下标的，失败则自旋
+        } while(!this.nextServerCyclicCounter.compareAndSet(current, next));
+
+        return next;
+    }
+}
+```
+
+
+
+### 4. 改变Ribbon的默认策略
+
+在springboot工程下，新创建一个springboot扫描不到的包，自定义配置类即可，让springboot扫描不到的作用是只有该客户端使用配置的算法，其他客户端还是使用默认的或者是自己配置的。若springboot扫描到了此配置类，会同步到其他客户端服务。
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-03 15:18
+ **/
+@Configuration
+public class RibbonRule {
+
+    @Bean
+    public IRule getRule() {
+        return new RandomRule();
+    }
+}
+```
+
