@@ -23,6 +23,7 @@ public class UserController {
     @GetMapping("/user/{id}")
     public RespBean get(@PathVariable("id") Integer id) {
         User user = userService.selectById(id);
+//        try { Thread.sleep(2000); } catch (InterruptedException e) { e.printStackTrace(); }
         return new RespBean(200,"success:8002",user);
     }
 

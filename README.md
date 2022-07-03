@@ -468,3 +468,107 @@ public class RibbonRule {
 }
 ```
 
+
+
+
+
+## 服务调用OpenFeign
+
+
+
+### 1. Maven依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+
+
+### 2. 如何使用
+
+* 定义service接口，然后重写一遍需要调用的服务接口，在接口上加上注解`@FeignClient`，value值填充需要调用的服务名
+
+```java
+@Service
+@FeignClient(value = "PAYMENT")
+public interface PaymentService {
+
+    @GetMapping("/user/{id}")
+    public RespBean get(@PathVariable("id") Integer id);
+}
+```
+
+* 在自己的controller接口中直接调用上方的服务方法即可
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-03 19:52
+ **/
+@RestController
+public class FeignController {
+
+    @Autowired
+    PaymentService service;
+
+    @GetMapping("/feign/{id}")
+    public RespBean service(@PathVariable("id") Integer id) {
+        return service.get(id);
+    }
+}
+```
+
+* 在主启动类上添加注解`@EnableFeignClients`
+
+### 3. OpenFeign的超时控制
+
+OpenFeign的服务调用时间默认是一秒，当服务执行超过1秒后还没有返回结果就会抛出异常。而改变服务调用时间需要在yml配置文件中添加：
+
+```yml
+ribbon:
+  ReadTimeout: 2000 // 服务调用超时时间
+  ConnectTimeout: 3000 // 连接时间
+```
+
+
+
+### 4. OpenFeign的日志打印
+
+* OpenFeign有四种打印格式
+
+```java
+public static enum Level {
+    NONE,// 不打印
+    BASIC,// 打印请求方法，url，请求状态码，及执行时间
+    HEADERS, // 打印请求头和响应头和basic打印的信息
+    FULL; // 打印请求中的数据信息和headers打印的信息
+
+    private Level() {
+    }
+}
+```
+
+* 添加配置类定义打印级别
+
+```java
+@Configuration
+public class FeignLogConfig {
+
+    @Bean
+    public Logger.Level level() {
+        return Logger.Level.FULL;
+    }
+}
+```
+
+* yml配置
+
+```yml
+logging:
+  level:
+    com.dajiao.service: debug
+```
+
