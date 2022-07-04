@@ -1,10 +1,9 @@
 server:
-  port: 8004
-
+  port: 8006
 
 eureka:
   instance:
-    instance-id: open-feign-consumer
+    instance-id: hystrix-feign-consumer
     prefer-ip-address: true
   client:
     register-with-eureka: true
@@ -13,4 +12,8 @@ eureka:
       defaultZone: http://eureka7001.com:7001/eureka
 spring:
   application:
-    name: feigen-consumer
+    name: hystrix-consumer
+
+feign:
+  hystrix:
+    enabled: true

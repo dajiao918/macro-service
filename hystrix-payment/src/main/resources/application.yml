@@ -1,0 +1,21 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: hystrix-payment
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/book2?characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      username: root
+      password: qwer
+      driver-class-name: com.mysql.cj.jdbc.Driver
+eureka:
+  instance:
+    instance-id: hystrix-payment
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka

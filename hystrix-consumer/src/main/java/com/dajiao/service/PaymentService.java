@@ -1,5 +1,6 @@
 package com.dajiao.service;
 
+import com.dajiao.service.impl.HystrixPaymentService;
 import com.dajiao.vo.RespBean;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @create: 2022-07-03 19:48
  **/
 @Service
-@FeignClient(value = "PAYMENT")
+@FeignClient(value = "HYSTRIX-PAYMENT",fallback = HystrixPaymentService.class)
 public interface PaymentService {
 
     @GetMapping("/user/{id}")

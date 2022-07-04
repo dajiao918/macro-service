@@ -572,3 +572,135 @@ logging:
     com.dajiao.service: debug
 ```
 
+
+
+### OpenFeign和ribbon的简单对比
+
+* OpenFeign集成了ribbon，所以OpenFeign也有负载均衡策略
+* OpenFeign以动态代理的技术可以让开发者不使用RestTemplate来进行调用，而是直接在自己接口中调用copy的服务方法定义
+* 待定。。
+
+
+
+## 服务降级、熔断、限流Hystrix
+
+### 1. 服务降级
+
+* 什么是服务降级
+
+服务降级相当于“弃车保帅”，当服务之间调用，比如A调用B产生了超时、异常、宕机等情况时，就需要一种保底服务C，至少也要给用户一个友好的提示，把调用原来的服务B转换成调用现在的保底服务C，及时反馈、
+
+* 服务降级具体场景
+  * 比如抢车票时，每次都会返回一个中间态(抢票中。。。)，将请求缓存到队列中，这样不仅避免了服务之间的等待，还能给用户比较友好的回馈
+  * 关闭非核心功能，例如电商的注册、修改个人中心等
+
+* 降级一定是对非核心，非关键的业务进行降级
+
+### 2. 服务熔断
+
+* 什么是服务熔断
+
+服务熔断就是在服务调用时，检测调用失败或者成功的情况，当在一定时间内服务调用的失败率达到一定限度后，就会触发服务熔断，之后就会调用降级服务，当过了一定时间后，如果服务调用成功，就会恢复原来的服务调用关系。
+
+<img src="img/服务熔断.jpg">
+
+* 一开始的时候，熔断器是closed状态，当请求失败次数达到一定阈值threshold时，就会进入open状态，此时再调用服务就会调用降级服务，在reset timeout过后就会进入半开状态，此时请求如果成功就会关闭熔断器；反之就会又进入open状态
+
+
+
+### 3. maven依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
+
+
+### 4. 如何使用
+
+* 在启动类上加注解`@EnableCircuitBreaker`
+* 在需要降级的接口上加注解`@HystrixCommand`，指定降级方法fallbackMethod = "defaultFallbackMethod"，可以通过commandProperties属性指定降级策略
+
+```java
+@SpringBootApplication
+@EnableFeignClients("com.dajiao.service")
+@EnableCircuitBreaker
+public class ConsumerHystrixApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ConsumerHystrixApplication.class, args);
+    }
+}
+```
+
+
+
+```java
+@GetMapping("/hystrix/{id}")
+@HystrixCommand(fallbackMethod = "defaultFallbackMethod", commandProperties = {
+    @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds",value = "1000")
+})
+public RespBean service(@PathVariable("id") Integer id) {
+    int zero = 10/0;
+    return service.get(id);
+}
+```
+
+
+
+### 5. 配置默认的降级方法
+
+* 只要方法上有@HystrixCommand注解就可以进行降级
+
+```java
+@DefaultProperties(defaultFallback = "defaultFallbackMethod")
+public class HystrixController {
+    //...
+}
+```
+
+
+
+### 6. OpenFeign和Hystrix配合使用
+
+* 实现OpenFeign的接口
+
+```java
+@Component
+public class HystrixPaymentService implements PaymentService {
+    @Override
+    public RespBean get(Integer id) {
+        return new RespBean(500,"降级和服务代码分离",null);
+    }
+}
+```
+
+* 在接口的`@FeignClient`上添加属性fallback，值就是实现了此接口的class
+
+```java
+@FeignClient(value = "HYSTRIX-PAYMENT",fallback = HystrixPaymentService.class)
+```
+
+* 配置yml启动OpenFeign的hystrix
+
+```yml
+feign:
+  hystrix:
+    enabled: true
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
