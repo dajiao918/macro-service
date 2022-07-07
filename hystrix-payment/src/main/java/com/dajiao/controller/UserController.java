@@ -29,6 +29,9 @@ public class UserController {
     )
     public RespBean get(@PathVariable("id") Integer id) {
         User user = userService.selectById(id);
+        if (id < 0) {
+            throw new RuntimeException();
+        }
 //        int zero = 10/0;
 //        try { Thread.sleep(2000); } catch (InterruptedException e) { e.printStackTrace(); }
         return new RespBean(200,"success:8005",user);

@@ -17,6 +17,8 @@
         <module>cloud-feign-consumer</module>
         <module>hystrix-payment</module>
         <module>hystrix-consumer</module>
+        <module>hystrix-dashboard-consumer</module>
+        <module>gateway-8009</module>
     </modules>
     <name>cloud_demo</name>
     <description>Demo project for Spring Boot</description>

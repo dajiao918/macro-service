@@ -694,13 +694,187 @@ feign:
 
 
 
+### 7. Hystrix仪表盘
+
+* 新建监控工程引入依赖
+
+```java
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+* 在主启动类上加上注解`@EnableHystrixDashboard`
+* 配置端口号例如8007，直接访问http://localhost:8007/hystrix即可
+
+<img src="img/hystrix-dashboard.png">
+
+* 监控具体的一个服务，需要在**被监控的服务**的主启动类上加入以下代码，不然会出现连接异常
+
+```java
+@Bean
+public ServletRegistrationBean getServlet(){
+    HystrixMetricsStreamServlet servlet = new HystrixMetricsStreamServlet();
+    ServletRegistrationBean<HystrixMetricsStreamServlet> bean =
+        new ServletRegistrationBean<>(servlet);
+    bean.setLoadOnStartup(1);
+    bean.addUrlMappings("/hystrix.stream");
+    bean.setName("HystrixMetricsStreamServlet");
+    return bean;
+}
+```
+
+* 直接在豪猪主界面上输入http://localhost:8005/hystrix.stream，延迟选项和title选项随意
+
+<img src="img/dashboard-success.png">
 
 
 
+## 网关GateWay
 
 
 
+### 1. 网关介绍
 
+
+
+### 2. maven依赖
+
+不能引入web依赖
+
+```xml
+ <dependency>
+     <groupId>org.springframework.boot</groupId>
+     <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+
+
+
+### 3. yml配置
+
+```yml
+server:
+  port: 8009
+
+eureka:
+  instance:
+    instance-id: gateway
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka
+    fetch-registry: true
+    register-with-eureka: true
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      enabled: true
+      routes:
+        - id: payment_route1 #唯一id，用于路由
+#          uri: http://localhost:8001/ # 路由的去向
+          uri: lb://PAYMENT # 可以使用服务在注册中心的名字路由，lb表示负载均衡
+          predicates:
+            - Path=/user/** # Path类型的断言，符合该path才能通过路由
+```
+
+
+
+### 4. 启动类
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-07 20:24
+ **/
+@SpringBootApplication
+@EnableEurekaClient
+public class GateWayApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(GateWayApplication.class, args);
+    }
+}
+
+```
+
+
+
+### 5. 使用编码路由
+
+编写配置类
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-07 20:49
+ **/
+@Configuration
+public class GateWayConfig {
+    @Bean
+    public RouteLocator routeLocator(RouteLocatorBuilder builder) {
+        RouteLocatorBuilder.Builder routes = builder.routes();//获取路由对象
+        // 使用函数式编程创建路由去向，id，path等
+        return routes.route("SPRINGCLOUD_CH", p -> p.path("/spring-cloud-greenwich.html")
+                .uri("https://www.springcloud.cc/")
+                ).build();
+    }
+}
+```
+
+
+
+### 6. 断言和过滤器
+
+看官网
+
+### 7. 自定义过滤器
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-07 21:05
+ **/
+@Component
+public class GateWayFilter implements GlobalFilter, Ordered {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        MultiValueMap<String, String> params = exchange.getRequest().getQueryParams();
+        if (params.containsKey("username")) {
+            if (params.get("username") != null) {
+                return chain.filter(exchange);
+            }
+        }
+        exchange.getResponse().setStatusCode(HttpStatus.NOT_ACCEPTABLE);
+        return exchange.getResponse().setComplete();
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+}
+```
 
 
 
