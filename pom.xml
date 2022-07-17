@@ -19,6 +19,15 @@
         <module>hystrix-consumer</module>
         <module>hystrix-dashboard-consumer</module>
         <module>gateway-8009</module>
+        <module>config-server</module>
+        <module>config-client</module>
+        <module>stream-provider</module>
+        <module>stream-consumer9002</module>
+        <module>stream-consumer9003</module>
+        <module>nacos-provider</module>
+        <module>nacos-consumer</module>
+        <module>nacos-config</module>
+        <module>sentinel-providor</module>
     </modules>
     <name>cloud_demo</name>
     <description>Demo project for Spring Boot</description>
@@ -42,6 +51,14 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>2.2.2.RELEASE</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>2.1.0.RELEASE</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

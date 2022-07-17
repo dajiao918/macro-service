@@ -2,6 +2,121 @@
 
 
 
+## 单体架构
+
+### 单体架构的优点
+
+* 所有模块都在同一个进程内互相调用，不用考虑网络分区，数据一致性等复杂的事
+* 模块之间调用简单，高效
+
+### 单体架构的劣势
+
+* 所有功能都在一个进程中，如果任何一份代码出现了缺陷，大量消耗进程的资源，造成的影响就是全局性的，不可分离的
+
+
+
+单体架构本身是一种非常优秀，简洁的模式，就像一个公司只有几十个人，很少会分布在全世界各个地方来进行工作，因为无论是在工作量上还是在成本上，都不值得这样做。当然公司有几万人的规模，业务方面肯定遍布各地，需要进行分离。所以单体架构向微服务架构演变是由于单体的计算机硬件方面总有瓶颈，并且软件规模已经到达了一定程度后需要向微服务方向转变，使软件的开发，测试，部署等更加容易。
+
+
+
+### CAP理论
+
+* Partition tolerance：分区容错性
+
+分区是指分布式系统中的子网络，例如阿里巴巴可能在广州和杭州各自构建服务，两个地方的网络构成了不同的分区。当某一个分区不能通信的时候，整个系统应该保持对外提供服务的能力。
+
+* consistent：一致性
+
+一致性是指在分布式系统中每个节点的数据都是一致的，不能出现a节点的账户是1000，b节点的账户是2000的情况
+
+* availability：可用性
+
+可用性是指每个节点在收到请求后，必须返回数据
+
+
+
+由于网络是不可靠的，所以分区之间出现失联是不可避免的，如果不满足分区容错性的话，即出现失联就停掉整个分布式系统，那还不如使用单体架构。所以CAP中的P是必须要满足的。
+
+
+
+* 为什么C和A不能同时满足呢？
+
+如果系统需要满足系统一致性，那么就必须在节点之间同步数据，a节点收到修改某数据的请求之后，需要将此数据同步给b节点，此时b节点就不应该对外提供该数据的读写操作，不然就满足不了一致性。那如果限制了读写操作，势必造成了可用性不能满足！
+
+
+
+* 个人认为在正常环境下，C和A是可以存在的
+
+因为如果数据量少，网络无阻塞，数据同步是很快的，那么可用性只要在数据同步的时间之外都是满足的，一般情况下C和A是可以同时存在的。
+
+
+
+### base理论
+
+
+
+base单词是由Basically available，soft state，eventually consistent三个词语组成的
+
+* Basically available：基本可用
+
+  **响应时间上的损失**：正常情况下的搜索引擎0.5秒即返回给用户结果，而基本可用的搜索引擎可以在2秒作用返回结果。
+
+  **功能上的损失**：在一个电商网站上，正常情况下，用户可以顺利完成每一笔订单。但是到了大促期间，为了保护购物系统的稳定性，部分消费者可能会被引导到一个降级页面。
+
+  
+
+* soft state
+
+  软状态相对原子性来说各个要求都有所降低，原子性（硬状态），要求多个节点的数据副本都是一致的,这是一种"硬状态"。软状态（弱状态）允许系统中的数据存在中间状态,并认为该状态不影响系统的整体可用性,即允许系统在多个不同节点的数据副本存在数据延迟
+
+* eventually consistent
+
+  最终一致性，一致性也分强一致性和弱一致性，而最终一致性属于弱一致性，就是系统并不保证连续进程或者线程的访问都会返回最新的更新过的值。系统在数据写入成功之后，不承诺立即可以读到最新写入的值，也不会具体的承诺多久之后可以读到。但会尽可能保证在某个时间级别（比如秒级别）之后，可以让数据达到一致性状态。
+
+
+
+## 分布式事务
+
+### 两阶段提交
+
+
+
+
+
+
+
+### 三阶段提交
+
+
+
+
+
+
+
+### 可靠消息队列
+
+
+
+
+
+
+
+### TCC
+
+
+
+
+
+
+
+### Saga
+
+
+
+
+
+
+
 ## 服务注册中心Eureka
 
 
@@ -877,4 +992,331 @@ public class GateWayFilter implements GlobalFilter, Ordered {
 ```
 
 
+
+## stream消息中间件屏蔽
+
+### 1. 介绍
+
+
+
+### 2. maven引入
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-stream-rabbit</artifactId>
+</dependency>
+```
+
+
+
+### 3. yml配置
+
+* 生产者yml配置
+
+```yml
+spring:
+  application:
+    name: rabbit-provider
+  cloud:
+    stream:
+      binders: #被绑定的消息中间件服务信息
+        defaultRabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      bindings: # 发送消息绑定的交换机
+        output: # 表示配置生产者
+          destination: studyExchange
+          content-type: application/json
+          binder: defaultRabbit
+```
+
+* 消费者yml配置
+
+```yml
+spring:
+  application:
+    name: rabbit-consumer
+  cloud:
+    stream:
+      binders: #被绑定的消息中间件服务信息
+        defaultRabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      bindings: # 绑定的交换机
+        input: # 表示配置消费者
+          destination: studyExchange
+          content-type: application/json
+          binder: defaultRabbit
+```
+
+
+
+### 4. 业务编写
+
+* 生产者
+
+```java
+/**
+ * @author: Mr.Yu
+ * @create: 2022-07-09 20:24
+ **/
+@EnableBinding(Source.class)
+public class ProviderServiceImpl implements ProviderService {
+
+    @Autowired
+    MessageChannel output;
+
+    @Override
+    public void send() {
+        String s = UUID.randomUUID().toString();
+        output.send(MessageBuilder.withPayload(s).build());
+        System.out.println("发送消息=====>"+s);
+    }
+}
+```
+
+* 消费者
+
+```java
+@RestController
+@EnableBinding(Sink.class)
+public class MessageConsumerController {
+
+    @StreamListener(Sink.INPUT)
+    public void receiveMessage(Message<String> message) {
+        System.out.println("接收消息======>"+message.getPayload());
+    }
+}
+```
+
+
+
+### 5. 避免重复消费
+
+要想服务之间避免重复消费，就需要在同一类消费服务之间绑定一个组，类似于同一类消费服务之间绑定一个消费队列，这样在发送消息的时候，绑定同一个队列的服务之中仅有一个服务可以获取到这个消息
+
+```yml
+bindings: # 绑定的交换机
+    input:
+    destination: studyExchange
+    content-type: application/json
+    binder: defaultRabbit
+    group: consumer2 #类似于指定一个队列
+```
+
+
+
+## Nacos服务注册
+
+
+
+下载Nacos，并启动
+
+### 1. Maven依赖
+
+```xml
+<dependencyManagement>
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+        <version>2.1.0.RELEASE</version>
+        <type>pom</type>
+        <scope>import</scope>
+    </dependency>
+</dependencyManagement>
+
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+</dependency>
+```
+
+
+
+### 2. yml配置
+
+```yml
+spring:
+  application:
+    name: nacos-provider
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848 #nacos的服务中心地址+端口号
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" # 暴露监控
+```
+
+### 3. 主启动类
+
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class NacosProviderApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(NacosProviderApplication.class, args);
+    }
+
+    @RestController
+    public class EchoController {
+        @GetMapping(value = "/echo/{string}")
+        public String echo(@PathVariable String string) {
+            return "Hello Nacos Discovery " + string;
+        }
+    }
+}
+```
+
+启动之后查看服务注册中心，就会看到该注册实例
+
+* 消费者application
+
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class NacosConsumerApplication {
+
+    @RestController
+    public class ConsumerController {
+
+        @Autowired
+        LoadBalancerClient loadBalancerClient;
+        @Autowired
+        RestTemplate restTemplate;
+
+
+        @GetMapping("/consumer/{str}")
+        public String consume(@PathVariable("str") String str) {
+            ServiceInstance instance = loadBalancerClient.choose("nacos-provider");
+            String path = String.format("http://%s:%s/echo/",instance.getHost(),instance.getPort());
+            System.out.println("request path:" +path);
+            return restTemplate.getForObject(path+str, String.class);
+        }
+
+    }
+
+    public static void main(String[] args) {
+        SpringApplication.run(NacosConsumerApplication.class, args);
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+
+
+
+## Nacos 配置中心
+
+### 1. Maven依赖
+
+```xml
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+</dependency>
+```
+
+
+
+### 2. yml配置
+
+* bootstrap.yml配置
+
+```yml
+spring:
+  application:
+    name: nacos-config
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848 # 配置中心地址
+        file-extension: yaml # 配置文件的类型
+```
+
+配置文件规则解读：
+
+Nacos默认是以`${spring.application.name}-${spring.profile.active}.${config.file-extension}`作为配置文件的文件名去访问配置中心的，在没有指定`${spring.profile.active}`的情况下，不会加上profile。所以上方的配置就是访问`nacos-config.yaml`，在配置中心增加这个配置后，就可以在工程中访问配置中心的设置！
+
+### 3. 测试类
+
+```java
+@RestController
+@RefreshScope // 动态刷新配置文件
+public class ConfigController{
+
+    @Value("${user.name}")
+    private String username;
+    @Value("${user.age}")
+    private Integer age;
+
+    @GetMapping("/user")
+    public String userInfo(){
+        System.out.println(username+age);
+        return "{username: " + username + ", age: " + age + "}";
+    }
+}
+```
+
+
+
+### 4. 分组配置文件
+
+Nacos配置中心可以指定不同的组来对文件进行配置，如果有两个配置文件的文件名相同，但是在不同的组中，那么Nacos会根据配置的组来访问配置文件
+
+* yml配置
+
+```yml
+spring:
+  application:
+    name: nacos-config
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        group: GZ
+```
+
+在Nacos配置中心指定配置文件nacos-config.yaml的组为GZ即可访问该配置文件
+
+
+
+### 5. NameSpace配置文件
+
+Nacos不仅支持组的分割，还支持在组之上配置一个名称空间，来分割相同的组；
+
+* yml配置
+
+```yml
+spring:
+  application:
+    name: nacos-config
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        namespace: 551820b1-ebca-429e-a422-3654d4382de4
+        group:GZ
+```
 

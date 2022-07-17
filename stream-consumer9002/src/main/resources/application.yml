@@ -1,0 +1,28 @@
+server:
+  port: 9002
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka
+spring:
+  application:
+    name: rabbit-consumer
+  cloud:
+    stream:
+      binders: #被绑定的消息中间件服务信息
+        defaultRabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      bindings: # 绑定的交换机
+        input:
+          destination: studyExchange
+          content-type: application/json
+          binder: defaultRabbit
+          group: consumer2 #类似于指定一个交换机
